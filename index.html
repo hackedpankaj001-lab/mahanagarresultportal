@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Class 11 Scholarship Result Finder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .container { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 1.6rem; color: #f8fafc; text-align: center; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: #94a3b8; font-size: 0.95rem; margin-bottom: 32px; }
+    .search-box { background: #1e293b; border-radius: 16px; padding: 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.3); margin-bottom: 24px; }
+    label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; font-weight: 500; }
+    .input-row { display: flex; gap: 12px; }
+    input[type="text"] { flex: 1; padding: 14px 18px; border: 2px solid #334155; border-radius: 10px; font-size: 1.1rem; background: #0f172a; color: #e2e8f0; outline: none; transition: border-color 0.2s; }
+    input[type="text"]:focus { border-color: #3b82f6; }
+    button { padding: 14px 28px; background: #3b82f6; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    .error { background: #7f1d1d; border: 1px solid #dc2626; color: #fca5a5; padding: 12px 18px; border-radius: 10px; margin-bottom: 16px; font-size: 0.95rem; }
+    .result-card { background: #1e293b; border-radius: 16px; padding: 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.3); margin-bottom: 12px; }
+    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .roll-number { font-size: 1.5rem; font-weight: 700; color: #f8fafc; }
+    .rank-badge { background: #3b82f6; padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
+    .marks-display { display: flex; align-items: baseline; gap: 8px; }
+    .marks-number { font-size: 3rem; font-weight: 800; color: #22c55e; line-height: 1; }
+    .marks-label { font-size: 1rem; color: #94a3b8; }
+    .rank-info { margin-top: 12px; color: #94a3b8; font-size: 0.9rem; }
+    .multi-result { background: #1e293b; border-radius: 16px; padding: 16px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .multi-result:hover { background: #334155; }
+    .multi-result .roll { font-weight: 600; font-size: 1.1rem; }
+    .multi-result .marks { color: #22c55e; font-weight: 600; }
+    .multi-result .rank { color: #94a3b8; font-size: 0.85rem; }
+    .loading { text-align: center; color: #94a3b8; padding: 20px; }
+    .stats { text-align: center; color: #475569; font-size: 0.8rem; margin-top: 32px; }
+    .note { text-align: center; margin-top: 18px; color: #94a3b8; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎓 Class 11 Scholarship Exam 2083</h1>
+    <p class="subtitle">Kathmandu Metropolitan City — Result Finder</p>
+
+    <div class="search-box">
+      <label for="rollInput">Enter Roll Number</label>
+      <div class="input-row">
+        <input type="text" id="rollInput" placeholder="e.g. 12578" autofocus>
+        <button id="searchBtn" onclick="search()">Search</button>
+      </div>
+    </div>
+
+    <div id="results"></div>
+    <div class="stats" id="stats"></div>
+    <p class="note">This site uses a static JSON file and works without a backend.</p>
+  </div>
+
+  <script>
+    let records = [];
+    let loaded = false;
+
+    async function loadData() {
+      try {
+        const res = await fetch('results_data.json');
+        if (!res.ok) throw new Error('Could not load data');
+        records = await res.json();
+        loaded = true;
+      } catch (err) {
+        document.getElementById('results').innerHTML = '<div class="error">Unable to load results data. Check that <strong>results_data.json</strong> is present.</div>';
+      }
+    }
+
+    function createError(message) {
+      return '<div class="error">' + message + '</div>';
+    }
+
+    function search() {
+      const input = document.getElementById('rollInput');
+      const btn = document.getElementById('searchBtn');
+      const resultsDiv = document.getElementById('results');
+      const statsDiv = document.getElementById('stats');
+      const roll = input.value.trim();
+
+      if (!roll) {
+        resultsDiv.innerHTML = createError('Please enter a roll number');
+        statsDiv.textContent = '';
+        return;
+      }
+
+      if (!loaded) {
+        resultsDiv.innerHTML = createError('Data is still loading. Try again in a moment.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Searching...';
+      resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+
+      const matches = records.filter(r => String(r.roll).includes(roll));
+      if (!matches.length) {
+        resultsDiv.innerHTML = createError('No student found with roll number "' + roll + '"');
+        statsDiv.textContent = '';
+      } else if (matches.length === 1) {
+        resultsDiv.innerHTML = showSingleResult(matches[0]);
+        statsDiv.textContent = '';
+      } else {
+        resultsDiv.innerHTML = showMultiResults(matches);
+        statsDiv.textContent = matches.length + ' results found';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Search';
+    }
+
+    function showSingleResult(r) {
+      return `
+        <div class="result-card">
+          <div class="result-header">
+            <span class="roll-number">Roll No: ${r.roll}</span>
+            <span class="rank-badge">Rank #${r.rank}</span>
+          </div>
+          <div class="marks-display">
+            <span class="marks-number">${r.marks}</span>
+            <span class="marks-label">/ 100</span>
+          </div>
+          <div class="rank-info">${r.rank === 1 ? '🥇 Top Rank!' : 'Position: ' + r.rank + ' out of 14056 students'}</div>
+        </div>
+      `;
+    }
+
+    function showMultiResults(data) {
+      let html = '<div class="error">Multiple matches found. Select one:</div>';
+      data.slice(0, 25).forEach(r => {
+        html += `
+          <div class="multi-result" onclick="selectResult('${r.roll}')">
+            <span class="roll">Roll: ${r.roll}</span>
+            <div>
+              <span class="marks">${r.marks} marks</span>
+              <span class="rank"> • Rank #${r.rank}</span>
+            </div>
+          </div>
+        `;
+      });
+      return html;
+    }
+
+    function selectResult(roll) {
+      document.getElementById('rollInput').value = roll;
+      search();
+    }
+
+    document.getElementById('rollInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') search();
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
