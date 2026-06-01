@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mahanagarresultportal.vercel.app/sitemap.xml
